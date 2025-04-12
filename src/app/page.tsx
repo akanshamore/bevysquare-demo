@@ -26,8 +26,8 @@ export default async function Home() {
         </div>
       </header>
       <main className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="bg-white p-6 rounded-lg shadow-lg">
+        <div className="flex gap-8">
+          <div className="w-[400px] bg-white p-6 rounded-lg shadow-lg">
             <h2 className="text-2xl font-bold mb-6">Create New Todo</h2>
             <form action={createTodo} className="space-y-4">
               <input
@@ -54,7 +54,9 @@ export default async function Home() {
             <TodoList initialTodos={initialTodos.todos} />
           </div>
 
-          <TodoDetails />
+          <div className="flex-1 bg-white p-6 rounded-lg shadow-lg">
+            <TodoDetails />
+          </div>
         </div>
       </main>
     </div>
