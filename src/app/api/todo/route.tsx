@@ -1,25 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import clientPromise from "@/lib/db";
-import { ObjectId } from "mongodb";
+import Todo from "@/models/Todo";
+import connectDB from "@/lib/db";
 
 export async function GET(request: NextRequest) {
   try {
+    await connectDB();
+
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
     const skip = (page - 1) * limit;
 
-    const client = await clientPromise;
-    const db = client.db("tododb");
+    const todos = await Todo.find().skip(skip).limit(limit);
 
-    const todos = await db
-      .collection("todos")
-      .find({})
-      .skip(skip)
-      .limit(limit)
-      .toArray();
+    console.log("Todos:", todos);
 
-    const total = await db.collection("todos").countDocuments();
+    const total = await Todo.countDocuments();
 
     return NextResponse.json({
       todos,
@@ -36,11 +32,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("request");
+    await connectDB();
+
     const body = await request.json();
     const { title, description } = body;
-
-    console.log("Received data:", body);
 
     if (!title || !description) {
       return NextResponse.json(
@@ -49,19 +44,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const client = await clientPromise;
-    const db = client.db("tododb");
-
-    const todo = {
+    const todo = await Todo.create({
       title,
       description,
       date: new Date(),
-    };
-
-    const result = await db.collection("todos").insertOne(todo);
+    });
 
     return NextResponse.json(
-      { message: "Todo created successfully", id: result.insertedId },
+      { message: "Todo created successfully", id: todo._id },
       { status: 201 }
     );
   } catch (error) {
@@ -74,6 +64,8 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    await connectDB();
+
     const body = await request.json();
     const { id, title, description } = body;
 
@@ -84,24 +76,19 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const client = await clientPromise;
-    const db = client.db("tododb");
-
     const updateData = {
       ...(title && { title }),
       ...(description && { description }),
       updatedAt: new Date(),
     };
 
-    const result = await db
-      .collection("todos")
-      .updateOne({ _id: new ObjectId(id) }, { $set: updateData });
+    const todo = await Todo.findByIdAndUpdate(id, updateData, { new: true });
 
-    if (result.matchedCount === 0) {
+    if (!todo) {
       return NextResponse.json({ error: "Todo not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ message: "Todo updated successfully" });
+    return NextResponse.json({ message: "Todo updated successfully", todo });
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to update todo" },
